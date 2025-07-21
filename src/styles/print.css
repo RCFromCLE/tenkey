@@ -1,0 +1,147 @@
+/* Print styles for company report */
+@media print {
+  /* General page setup */
+  @page {
+    margin: 1.5cm;
+    size: A4;
+  }
+
+  body {
+    background: white !important;
+    color: black !important;
+    font-size: 12pt;
+    line-height: 1.45;
+  }
+
+  /* Hide unnecessary elements */
+  nav, 
+  button,
+  .no-print {
+    display: none !important;
+  }
+
+  /* Container adjustments */
+  .max-w-7xl {
+    max-width: none !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+
+  /* Colors and backgrounds */
+  * {
+    color: black !important;
+    border-color: #ddd !important;
+    background: transparent !important;
+  }
+
+  /* Card styling */
+  .card {
+    break-inside: avoid;
+    border: 1px solid #ddd !important;
+    margin-bottom: 1.5rem !important;
+    padding: 1rem !important;
+    page-break-inside: avoid;
+    box-shadow: none !important;
+  }
+
+  /* Typography */
+  h1 {
+    font-size: 24pt !important;
+    margin-bottom: 1rem !important;
+  }
+
+  h2, .card-title {
+    font-size: 18pt !important;
+    margin-bottom: 0.75rem !important;
+  }
+
+  h3, h4 {
+    font-size: 14pt !important;
+    margin-bottom: 0.5rem !important;
+  }
+
+  p, li {
+    font-size: 11pt !important;
+    line-height: 1.4 !important;
+  }
+
+  /* Metrics and data */
+  .metric-card {
+    break-inside: avoid;
+    border: 1px solid #ddd !important;
+    padding: 0.75rem !important;
+  }
+
+  .metric-value {
+    font-size: 16pt !important;
+    font-weight: bold !important;
+  }
+
+  /* Grid adjustments */
+  .grid {
+    display: grid !important;
+    grid-template-columns: repeat(2, 1fr) !important;
+    gap: 1rem !important;
+  }
+
+  /* Lists */
+  ul, ol {
+    padding-left: 1.5rem !important;
+  }
+
+  li {
+    break-inside: avoid;
+  }
+
+  /* SWOT Analysis */
+  .swot-grid {
+    grid-template-columns: repeat(2, 1fr) !important;
+    gap: 1rem !important;
+    margin: 1rem 0 !important;
+  }
+
+  .swot-card {
+    border: 1px solid #ddd !important;
+    padding: 0.75rem !important;
+    margin-bottom: 0.75rem !important;
+  }
+
+  /* Specific section adjustments */
+  .risk-assessment,
+  .market-position,
+  .recommendations {
+    break-before: page;
+  }
+
+  /* Icons */
+  .lucide-icon {
+    display: none !important;
+  }
+
+  /* Footer */
+  .report-footer {
+    margin-top: 2rem !important;
+    padding-top: 1rem !important;
+    border-top: 1px solid #ddd !important;
+    text-align: center !important;
+    font-size: 9pt !important;
+  }
+
+  /* Color indicators */
+  .text-green-400::before { content: "▲ "; }
+  .text-red-400::before { content: "▼ "; }
+  .text-blue-400::before { content: "→ "; }
+  .text-yellow-400::before { content: "! "; }
+
+  /* Links */
+  a {
+    text-decoration: none !important;
+  }
+
+  /* Ensure last page footer */
+  .report-container::after {
+    content: "";
+    display: block;
+    height: 100px;
+  }
+}

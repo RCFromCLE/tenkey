@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Models API</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #1a1a1a;
+            color: #fff;
+        }
+        button {
+            background: #4a5568;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            margin: 5px;
+            cursor: pointer;
+            border-radius: 5px;
+        }
+        button:hover {
+            background: #2d3748;
+        }
+        .result {
+            margin-top: 20px;
+            padding: 15px;
+            background: #2d3748;
+            border-radius: 5px;
+            white-space: pre-wrap;
+        }
+        .success {
+            border-left: 4px solid #48bb78;
+        }
+        .error {
+            border-left: 4px solid #f56565;
+        }
+    </style>
+</head>
+<body>
+    <h1>Test Models API Endpoints</h1>
+    
+    <div>
+        <h2>Test Actions:</h2>
+        <button onclick="testGetModels()">Get Current Models</button>
+        <button onclick="testSetChatModel()">Set Chat Model (Gemini Free)</button>
+        <button onclick="testSetAgentModel()">Set Agent Model (GPT-4o)</button>
+    </div>
+    
+    <div id="result" class="result"></div>
+
+    <script>
+        const resultDiv = document.getElementById('result');
+        
+        function showResult(message, isError = false) {
+            resultDiv.className = `result ${isError ? 'error' : 'success'}`;
+            resultDiv.textContent = message;
+        }
+        
+        async function testGetModels() {
+            try {
+                const response = await fetch('/api/user/models');
+                const data = await response.json();
+                
+                if (response.ok) {
+                    showResult(`Current Models:\n${JSON.stringify(data, null, 2)}`);
+                } else {
+                    showResult(`Error: ${data.error}`, true);
+                }
+            } catch (error) {
+                showResult(`Error: ${error.message}`, true);
+            }
+        }
+        
+        async function testSetChatModel() {
+            try {
+                const response = await fetch('/api/user/models', {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ 
+                        defaultChatModel: 'google/gemini-2.0-flash-exp:free' 
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    showResult(`Success! Chat model updated:\n${JSON.stringify(data, null, 2)}`);
+                } else {
+                    showResult(`Error: ${data.error}`, true);
+                }
+            } catch (error) {
+                showResult(`Error: ${error.message}`, true);
+            }
+        }
+        
+        async function testSetAgentModel() {
+            try {
+                const response = await fetch('/api/user/models', {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ 
+                        defaultAgentModel: 'openai/gpt-4o' 
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    showResult(`Success! Agent model updated:\n${JSON.stringify(data, null, 2)}`);
+                } else {
+                    showResult(`Error: ${data.error}`, true);
+                }
+            } catch (error) {
+                showResult(`Error: ${error.message}`, true);
+            }
+        }
+        
+        // Test on load
+        window.onload = () => {
+            showResult('Click a button to test the API endpoints');
+        };
+    </script>
+</body>
+</html>

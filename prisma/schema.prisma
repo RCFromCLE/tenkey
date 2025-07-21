@@ -1,0 +1,101 @@
+// prisma/schema.prisma
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+  ext_expires_in    Int?    // Add this field
+  user              User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model User {
+  id            String    @id @default(cuid())
+  name          String?
+  email         String?   @unique
+  emailVerified DateTime?
+  image         String?
+  accounts      Account[]
+  sessions      Session[]
+  chats         Chat[]
+  openRouterApiKey String?
+  openaiApiKey String?
+  googleCredentials String?
+  agentVoiceConfigs Json? @default("{}")
+  defaultChatModel String? @default("google/gemini-2.0-flash-exp")
+  defaultAgentModel String? @default("openai/gpt-4o")
+  defaultAgentPersonas String[] @default([])
+}
+
+model Chat {
+  id        String    @id @default(cuid())
+  userId    String
+  filing    Json      // Store filing metadata
+  messages  Json[]    // Array of chat messages
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, updatedAt(sort: Desc)]) // Index for efficient recent chats query
+}
+
+model FilingAnalysis {
+  id            String    @id @default(cuid())
+  companyId     String
+  filingId      String
+  filingType    String
+  filingDate    DateTime
+  revenue       Float
+  netIncome     Float
+  cashFlow      Float
+  segments      Json      // Store segments array
+  risks         Json      // Store risks array
+  analysis      Json      // Store complete analysis object
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  @@unique([companyId, filingId])
+}
+
+model AgentConversation {
+  id            String    @id @default(cuid())
+  userEmail     String
+  symbol        String
+  companyName   String
+  topic         String
+  participants  String[]  // Array of agent IDs
+  messages      String    @db.Text // JSON string of messages
+  metadata      String    @db.Text // JSON string of additional metadata
+  summary       String?   @db.Text // Optional generated summary
+  summaryModel  String?   // Model used for summary generation
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  @@index([userEmail, createdAt(sort: Desc)]) // Index for efficient user conversations query
+}
