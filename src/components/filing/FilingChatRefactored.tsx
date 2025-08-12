@@ -14,7 +14,9 @@ import { useFilingManagement } from '../../lib/hooks/use-filing-management';
 import { useTextToSpeech } from '../../lib/hooks/use-text-to-speech-enhanced';
 import { ChatHeader } from './ChatHeader';
 import { MessageList } from './MessageList';
+import { ClaudeStyleMessageList } from '../chat/ClaudeStyleMessageList';
 import { ChatInput } from './ChatInput';
+import { ClaudeStyleInput } from '../chat/ClaudeStyleInput';
 import { PromptSelector } from './PromptSelector';
 import { ControlPanel } from './ControlPanel';
 import { FilingSelectorModal } from './FilingSelectorModal';
@@ -87,7 +89,8 @@ export function FilingChatRefactored({
     setAnalysisMode,
     clearChat,
     handleConfirmAnalysis,
-    handleDeclineAnalysis
+    handleDeclineAnalysis,
+    stopGeneration
   } = useFilingChat({
     symbol,
     companyName,
@@ -102,7 +105,7 @@ export function FilingChatRefactored({
   // Use provided stock info if available, otherwise use hook's stock info
   const stockInfo = providedStockInfo || hookStockInfo;
 
-  const { showScrollButton, scrollToBottom } = useChatScroll(chatContainerRef, messages);
+  const { showScrollButton, scrollToBottom, forceScrollToBottom } = useChatScroll(chatContainerRef, messages);
 
   const {
     prompts,
@@ -124,7 +127,13 @@ export function FilingChatRefactored({
     addMultipleFilings,
     removeMultipleFilings,
     loadAvailableFilings
-  } = useFilingManagement(symbol, loadedFilings || initialFilings, chatId, onChatIdChange);
+  } = useFilingManagement(
+    symbol, 
+    // Use loaded filings from chat history if available, otherwise use initial filings (latest 10-Q)
+    loadedFilings && loadedFilings.length > 0 ? loadedFilings : initialFilings, 
+    chatId, 
+    onChatIdChange
+  );
 
   // Use provided available filings if available
   const filingsForModal = providedAvailableFilings || availableFilings;
@@ -232,13 +241,14 @@ export function FilingChatRefactored({
         {/* Messages Container */}
         <div 
           ref={chatContainerRef}
-          className="flex-1 overflow-y-auto relative bg-[#0B0E14]"
+          className="flex-1 overflow-y-auto relative bg-slate-950"
         >
-          <MessageList
+          <ClaudeStyleMessageList
             messages={messages}
             loading={loading}
             selectedFilings={selectedFilings}
             companyName={companyName}
+            symbol={symbol}
             apiKey={apiKey}
             analysisMode={analysisMode}
             selectedAgentPersonas={selectedAgentPersonas}
@@ -246,13 +256,11 @@ export function FilingChatRefactored({
             isSpeaking={isSpeaking}
             currentlyPlaying={currentlyPlaying}
             onSpeakerClick={handleSpeakerClick}
-            onConfirmAnalysis={handleConfirmAnalysis}
-            onDeclineAnalysis={handleDeclineAnalysis}
           />
           <div ref={messagesEndRef} />
           
           {showScrollButton && (
-            <ScrollToBottomButton onClick={scrollToBottom} visible={showScrollButton} />
+            <ScrollToBottomButton onClick={forceScrollToBottom} visible={showScrollButton} />
           )}
         </div>
 
@@ -303,7 +311,7 @@ export function FilingChatRefactored({
             </div>
           )}
           
-          <ChatInput
+          <ClaudeStyleInput
             input={input}
             loading={loading}
             isListening={isListening}
@@ -318,6 +326,7 @@ export function FilingChatRefactored({
                 startListening();
               }
             }}
+            onStopGeneration={stopGeneration}
           />
         </div>
       </div>

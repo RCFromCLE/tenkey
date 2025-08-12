@@ -22,8 +22,8 @@ export async function GET(request: Request) {
     });
 
     return NextResponse.json({
-      defaultChatModel: user?.defaultChatModel || 'google/gemini-2.0-flash-exp:free',
-      defaultAgentModel: user?.defaultAgentModel || 'openai/gpt-4o',
+      defaultChatModel: user?.defaultChatModel || 'openai/gpt-5-chat',
+      defaultAgentModel: user?.defaultAgentModel || 'openai/gpt-5-chat',
       defaultAgentPersonas: user?.defaultAgentPersonas || ['bull', 'bear', 'balanced', 'technical', 'risk'],
       agentVoiceConfigs: user?.agentVoiceConfigs || {}
     });
@@ -95,8 +95,8 @@ export async function PUT(request: Request) {
               email: session.user.email || `${session.user.id}@placeholder.local`,
               name: session.user.name || null,
               image: session.user.image || null,
-              defaultChatModel: defaultChatModel || 'google/gemini-2.0-flash-exp:free',
-              defaultAgentModel: defaultAgentModel || 'openai/gpt-4o',
+              defaultChatModel: defaultChatModel || 'openai/gpt-5-chat',
+              defaultAgentModel: defaultAgentModel || 'openai/gpt-5-chat',
               defaultAgentPersonas: defaultAgentPersonas || ['bull', 'bear', 'balanced', 'technical', 'risk']
             }
           });

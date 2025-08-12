@@ -3,7 +3,7 @@
  * Handles message state, chat submission, API integration, and loading states
  */
 
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import { Message } from '../types/filing-chat';
 import { Filing } from '../types/filing';
 import { cleanHtml } from '../utils/filing-truncator';
@@ -52,6 +52,7 @@ export function useFilingChat({
   const [stockInfo, setStockInfo] = useState<any>(null);
   const [agentModels, setAgentModels] = useState<Record<string, string>>({});
   const [loadedFilings, setLoadedFilings] = useState<Filing[] | null>(null);
+  const abortControllerRef = useRef<AbortController | null>(null);
 
   // Load chat history on mount or when chatId changes
   useEffect(() => {
@@ -66,16 +67,29 @@ export function useFilingChat({
         if (data.messages?.length) {
           setMessages(data.messages.map((msg: any) => ({ 
             ...msg, 
-            // Clean HTML from stored messages
-            content: cleanHtml(msg.content || ''),
+            // Don't clean HTML from messages - preserve formatting
+            content: msg.content || '',
             timestamp: new Date(msg.timestamp || Date.now()) 
           })));
         }
         
         // Load filings from chat history
         if (data.filing?.filings) {
-          console.log('Loading filings from chat history:', data.filing.filings);
-          setLoadedFilings(data.filing.filings);
+          console.log('Loading filings from chat history for chatId:', chatId);
+          console.log('Filings found:', data.filing.filings.map((f: any) => ({ 
+            form: f.form, 
+            date: f.filingDate, 
+            hasContent: !!f.content 
+          })));
+          // Make sure filings have their content preserved
+          const filingsWithContent = data.filing.filings.map((f: any) => ({
+            ...f,
+            // Ensure content is preserved
+            content: f.content || ''
+          }));
+          setLoadedFilings(filingsWithContent);
+        } else {
+          console.log('No filings found in chat history for chatId:', chatId);
         }
       } catch (error) {
         console.error('Error loading chat history:', error);
@@ -130,6 +144,9 @@ export function useFilingChat({
     // Use functional update to avoid stale closure
     setMessages(prev => [...prev, newMessage]);
 
+    // Create new abort controller for this request
+    abortControllerRef.current = new AbortController();
+
     try {
       // Get current messages for API call
       const currentMessages = [...messages, newMessage];
@@ -137,6 +154,7 @@ export function useFilingChat({
       const response = await fetch('/api/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Accept': 'text/event-stream' },
+        signal: abortControllerRef.current.signal,
         body: JSON.stringify({
           messages: currentMessages.map(m => ({ role: m.role, content: m.content })),
           filings: filings,
@@ -221,24 +239,24 @@ export function useFilingChat({
           const lastMessage = newMessages[newMessages.length - 1];
           if (lastMessage && lastMessage.role === 'assistant') {
             if (agentSeparatorFound && lastMessage.isAgentAnalysis) {
-              // Update agent analysis message - clean HTML
-              lastMessage.content = '🤖 **Agent Analysis**\n\n' + cleanHtml(cleanedText.trim());
+              // Update agent analysis message - don't clean HTML for AI responses
+              lastMessage.content = '🤖 **Agent Analysis**\n\n' + cleanedText.trim();
             } else {
               // Update main response - try to parse as JSON first
               try {
                 const parsed = JSON.parse(cleanedText);
                 if (parsed.content !== undefined) {
-                  // Clean HTML from the AI response
-                  lastMessage.content = cleanHtml(parsed.content);
+                  // Don't clean HTML from AI responses to preserve formatting
+                  lastMessage.content = parsed.content;
                   lastMessage.annotations = parsed.annotations || [];
                 } else {
                   // If JSON doesn't have content field, treat as plain text
-                  lastMessage.content = cleanHtml(cleanedText);
+                  lastMessage.content = cleanedText;
                 }
               } catch {
                 // If it's not JSON, it's plain text - this is the most common case
-                // Clean HTML from the AI response
-                lastMessage.content = cleanHtml(cleanedText);
+                // Don't clean HTML from AI responses to preserve formatting
+                lastMessage.content = cleanedText;
                 lastMessage.annotations = [];
               }
             }
@@ -259,15 +277,19 @@ export function useFilingChat({
         return newMessages;
       });
 
-    } catch (error) {
-      setMessages(prev => [...prev, { 
-        role: 'assistant', 
-        content: `**Error:** ${error instanceof Error ? error.message : 'An unknown error occurred.'}`, 
-        timestamp: new Date(),
-        error: true 
-      }]);
+    } catch (error: any) {
+      // Don't show error if it was an abort
+      if (error.name !== 'AbortError') {
+        setMessages(prev => [...prev, { 
+          role: 'assistant', 
+          content: `**Error:** ${error instanceof Error ? error.message : 'An unknown error occurred.'}`, 
+          timestamp: new Date(),
+          error: true 
+        }]);
+      }
     } finally {
       setLoading(false);
+      abortControllerRef.current = null;
     }
   }, [
     loading, 
@@ -287,6 +309,13 @@ export function useFilingChat({
     setChatId(undefined);
     setLoadedFilings(null);
     window.history.pushState({}, '', window.location.pathname);
+  }, []);
+
+  const stopGeneration = useCallback(() => {
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+      setLoading(false);
+    }
   }, []);
 
   const handleConfirmAnalysis = useCallback((buffer: string) => {
@@ -320,6 +349,10 @@ export function useFilingChat({
     setAnalysisMode,
     clearChat,
     handleConfirmAnalysis,
-    handleDeclineAnalysis
+    handleDeclineAnalysis,
+    stopGeneration,
+    chatId,
+    agentModels,
+    setAgentModels
   };
 }

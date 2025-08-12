@@ -38,14 +38,44 @@ export function FilingChatAdapter({
   initialChatId,
   stockInfo
 }: FilingChatAdapterProps) {
-  const [selectedModel, setSelectedModel] = useState('google/gemini-2.0-flash-exp:free');
-  const [selectedAnalysisModel, setSelectedAnalysisModel] = useState('openai/gpt-4o');
+  const [selectedModel, setSelectedModel] = useState('openai/gpt-5-chat');
+  const [selectedAnalysisModel, setSelectedAnalysisModel] = useState('openai/gpt-5-chat');
   const [selectedAgentPersonas, setSelectedAgentPersonas] = useState<string[]>([]);
   const [agentModels, setAgentModels] = useState<Record<string, string>>({});
   const [apiKey, setApiKey] = useState('');
+  const [loadedFilings, setLoadedFilings] = useState<Filing[] | null>(null);
+  const [loadingChatHistory, setLoadingChatHistory] = useState(!!initialChatId);
   
   // Fetch models from OpenRouter
   const { models, loading: modelsLoading } = useOpenRouterModels();
+
+  // Load chat history filings if we have a chatId
+  useEffect(() => {
+    const loadChatHistory = async () => {
+      if (!initialChatId) {
+        setLoadingChatHistory(false);
+        return;
+      }
+      
+      setLoadingChatHistory(true);
+      try {
+        const response = await fetch(`/api/chat/${initialChatId}`);
+        if (response.ok) {
+          const data = await response.json();
+          if (data.filing?.filings && data.filing.filings.length > 0) {
+            console.log('FilingChatAdapter: Loading filings from chat history:', data.filing.filings.map((f: any) => f.form));
+            setLoadedFilings(data.filing.filings);
+          }
+        }
+      } catch (error) {
+        console.error('Failed to load chat history:', error);
+      } finally {
+        setLoadingChatHistory(false);
+      }
+    };
+    
+    loadChatHistory();
+  }, [initialChatId]);
 
   // Fetch user's API key and default models
   useEffect(() => {
@@ -79,25 +109,40 @@ export function FilingChatAdapter({
     fetchUserData();
   }, []);
 
-  // Show loading state while models are being fetched
-  if (modelsLoading) {
+  // Show loading state while models or chat history are being fetched
+  if (modelsLoading || loadingChatHistory) {
     return (
       <div className="flex items-center justify-center h-full">
         <div className="text-center">
           <div className="text-4xl font-bold bg-gradient-to-br from-blue-400 to-cyan-600 bg-clip-text text-transparent mb-4 animate-pulse">
             01
           </div>
-          <p className="text-slate-400 font-light">Loading AI models...</p>
+          <p className="text-slate-400 font-light">
+            {loadingChatHistory ? 'Loading chat history...' : 'Loading AI models...'}
+          </p>
         </div>
       </div>
     );
   }
 
+  // Determine which filings to use:
+  // 1. If we have loaded filings from chat history, use those
+  // 2. Otherwise, use the current filing (latest 10-Q for new chats)
+  const initialFilings = loadedFilings || [filing];
+  
+  console.log('FilingChatAdapter: Using filings:', {
+    hasLoadedFilings: !!loadedFilings,
+    filingCount: initialFilings.length,
+    forms: initialFilings.map(f => f.form),
+    chatId: initialChatId
+  });
+
   return (
     <FilingChatRefactored
       symbol={filing.symbol}
       companyName={companyName}
-      initialFilings={[filing]}
+      // Use loaded filings from chat history if available, otherwise use current filing
+      initialFilings={initialFilings}
       availableFilings={filings}
       models={models}
       selectedModel={selectedModel}

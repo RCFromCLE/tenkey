@@ -9,6 +9,7 @@ import { Message } from '../types/filing-chat';
 interface UseChatScrollReturn {
   showScrollButton: boolean;
   scrollToBottom: (behavior?: ScrollBehavior) => void;
+  forceScrollToBottom: () => void;
 }
 
 export function useChatScroll(
@@ -18,7 +19,7 @@ export function useChatScroll(
   const [isAutoScrollEnabled, setIsAutoScrollEnabled] = useState(true);
   const [showScrollButton, setShowScrollButton] = useState(false);
 
-  // Scroll to bottom function
+  // Scroll to bottom function (respects auto-scroll state)
   const scrollToBottom = useCallback((behavior: ScrollBehavior = 'smooth') => {
     if (containerRef.current && isAutoScrollEnabled) {
       const container = containerRef.current;
@@ -28,6 +29,20 @@ export function useChatScroll(
       });
     }
   }, [containerRef, isAutoScrollEnabled]);
+
+  // Force scroll to bottom (ignores auto-scroll state, used for button click)
+  const forceScrollToBottom = useCallback(() => {
+    if (containerRef.current) {
+      const container = containerRef.current;
+      container.scrollTo({
+        top: container.scrollHeight,
+        behavior: 'smooth'
+      });
+      // Re-enable auto-scroll when user manually scrolls to bottom
+      setIsAutoScrollEnabled(true);
+      setShowScrollButton(false);
+    }
+  }, [containerRef]);
 
   // Handle scroll position for auto-scroll toggle
   useEffect(() => {
@@ -65,6 +80,7 @@ export function useChatScroll(
 
   return {
     showScrollButton,
-    scrollToBottom
+    scrollToBottom,
+    forceScrollToBottom
   };
 }

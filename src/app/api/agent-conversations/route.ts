@@ -74,7 +74,7 @@ Format the summary in clear, professional language suitable for investment decis
           'X-Title': 'TenKey AI - Agent Conversation Summary'
         },
         body: JSON.stringify({
-          model: summaryModel || 'anthropic/claude-3.5-sonnet',
+          model: summaryModel || 'openai/gpt-5-chat',
           messages: [
             {
               role: 'system',

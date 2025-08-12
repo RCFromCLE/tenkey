@@ -34,11 +34,8 @@ export function useFilingManagement(
   chatId?: string,
   onChatIdChange?: (chatId: string) => void
 ): UseFilingManagementReturn {
-  // Initialize with initialFilings if provided, ensuring they have content
-  const [selectedFilings, setSelectedFilings] = useState<Filing[]>(() => {
-    const validFilings = initialFilings.filter(f => f.content && f.content.length > 0);
-    return validFilings.length > 0 ? validFilings : initialFilings;
-  });
+  // Initialize state
+  const [selectedFilings, setSelectedFilings] = useState<Filing[]>([]);
   const [availableFilings, setAvailableFilings] = useState<Filing[]>([]);
   const [filingsLoading, setFilingsLoading] = useState(false);
   const [showFilingSelector, setShowFilingSelector] = useState(false);
@@ -47,6 +44,16 @@ export function useFilingManagement(
   // Track if filings have been initialized from chat history
   const initializedRef = useRef(false);
   const saveTimeoutRef = useRef<NodeJS.Timeout | undefined>(undefined);
+  const lastChatIdRef = useRef<string | undefined>(chatId);
+  
+  // Reset initialization when chatId changes
+  useEffect(() => {
+    if (chatId !== lastChatIdRef.current) {
+      console.log('ChatId changed from', lastChatIdRef.current, 'to', chatId, '- resetting initialization');
+      initializedRef.current = false;
+      lastChatIdRef.current = chatId;
+    }
+  }, [chatId]);
 
   /**
    * Save filings to database with debouncing
@@ -194,13 +201,31 @@ export function useFilingManagement(
     });
   }, []);
 
-  // Update selected filings when initial filings change
+  // Set initial filings when component mounts or when they change
   useEffect(() => {
-    if (initialFilings.length > 0 && selectedFilings.length === 0) {
+    console.log('Filing management effect triggered:', {
+      chatId,
+      initialFilingsCount: initialFilings?.length,
+      initialized: initializedRef.current,
+      forms: initialFilings?.map(f => f.form)
+    });
+    
+    // If we haven't initialized yet and have initial filings
+    if (!initializedRef.current && initialFilings && initialFilings.length > 0) {
+      // Check if these are from chat history (loadedFilings) or default filing
+      // LoadedFilings will have multiple filings or specific metadata
+      const isFromChatHistory = chatId && initialFilings.some(f => f.content && f.content.length > 0);
+      
+      if (isFromChatHistory) {
+        console.log('Using filings from chat history:', initialFilings.map(f => f.form));
+      } else if (!chatId) {
+        console.log('New chat - using default latest filing:', initialFilings.map(f => f.form));
+      }
+      
       setSelectedFilings(initialFilings);
       initializedRef.current = true;
     }
-  }, [symbol, initialFilings.length]); // Only re-run when symbol or initial filings count changes
+  }, [initialFilings, chatId]); // Re-run when initial filings or chatId changes
 
   // Monitor filing changes and save to database
   useEffect(() => {
